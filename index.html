@@ -232,39 +232,9 @@
             background: var(--state-hover);
         }
 
-        .data-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            margin-top: 24px;
-        }
-
-        .data-table th {
-            background: var(--surface-2);
-            padding: 12px 16px;
-            text-align: left;
-            font-weight: 600;
-            color: var(--text-secondary);
-            border-bottom: 2px solid var(--surface-4);
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-
-        .data-table td {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--surface-4);
-        }
-
-        .data-table tbody tr:hover {
-            background: var(--state-hover);
-        }
-
         .chart-container {
             height: 400px;
             margin-top: 24px;
-            border-radius: 8px;
-            overflow: hidden;
         }
 
         .toast {
@@ -310,6 +280,31 @@
             100% { transform: rotate(360deg); }
         }
 
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 24px;
+        }
+
+        .data-table th {
+            background: var(--surface-2);
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--surface-4);
+        }
+
+        .data-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--surface-4);
+        }
+
+        .data-table tbody tr:hover {
+            background: var(--state-hover);
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 0 16px;
@@ -327,24 +322,6 @@
                 width: 100%;
                 justify-content: center;
             }
-        }
-
-        /* Flatpickr Customization */
-        .flatpickr-calendar {
-            background: var(--surface-1);
-            border: none;
-            box-shadow: var(--elevation-2);
-            border-radius: 8px;
-        }
-
-        .flatpickr-day.selected {
-            background: var(--fm-orange);
-            border-color: var(--fm-orange);
-        }
-
-        .flatpickr-day.selected:hover {
-            background: var(--fm-orange-dark);
-            border-color: var(--fm-orange-dark);
         }
     </style>
 </head>
@@ -444,7 +421,7 @@
                     <span class="material-icons">trending_up</span>
                     View Trends
                 </button>
-<button onclick="downloadCSV()" class="btn btn-secondary">
+                <button onclick="downloadCSV()" class="btn btn-secondary">
                     <span class="material-icons">download</span>
                     Download CSV
                 </button>
@@ -467,7 +444,6 @@
     </div>
 
     <script>
-        // Your Google API Key
         const API_KEY = 'AIzaSyAlcRThhHSKrYdqGxFj7a4iCvt7Q2NiALc';
         let trendsData = [];
 
@@ -549,7 +525,7 @@
             const diffTime = Math.abs(endDate - startDate);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
-            if (diffDays > 5475) { // 15 years in days
+            if (diffDays > 5475) {
                 showToast('Date range cannot exceed 15 years');
                 return false;
             }
@@ -578,23 +554,6 @@
             });
         }
 
-        // Handle preset date buttons
-        document.getElementById('presetDates').addEventListener('click', (e) => {
-            if (e.target.classList.contains('preset-btn')) {
-                const days = parseInt(e.target.dataset.days);
-                const endDate = new Date();
-                const startDate = new Date();
-                startDate.setDate(endDate.getDate() - days);
-                
-                document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
-                document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
-                
-                // Update active state
-                document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
-            }
-        });
-
         async function fetchTrendsData(terms) {
             if (!validateDateRange()) {
                 return;
@@ -615,27 +574,28 @@
             document.getElementById('loadingOverlay').style.display = 'flex';
 
             try {
-                // Construct the API URL with key parameter
-                const baseUrl = `https://trends.googleapis.com/trends/api/explore?key=${API_KEY}`;
-                const params = new URLSearchParams({
-                    hl: 'en-US',
-                    tz: '-480',
-                    req: JSON.stringify({
-                        comparisonItem: validTerms.map(term => ({
-                            keyword: term,
-                            geo: geoType === 'GLOBAL' ? '' : geoValue,
-                            time: `${startDate} ${endDate}`
-                        })),
-                        category: 0,
-                        property: '',
-                        resolution: granularity
-                    })
+                // Create the request payload
+                const payload = {
+                    keywords: validTerms,
+                    startTime: new Date(startDate).toISOString(),
+                    endTime: new Date(endDate).toISOString(),
+                    geo: geoType === 'GLOBAL' ? '' : geoValue,
+                    resolution: granularity.toLowerCase()
+                };
+
+                // Make the API request
+                const response = await fetch('https://trends.googleapis.com/v1beta/trends?' + new URLSearchParams({
+                    key: API_KEY
+                }), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
                 });
 
-                const response = await fetch(`${baseUrl}&${params.toString()}`);
-                
                 if (!response.ok) {
-                    throw new Error('API request failed');
+                    throw new Error(`API request failed: ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -644,22 +604,21 @@
                 displayChart(trendsData);
             } catch (error) {
                 console.error('Error fetching data:', error);
-                showToast('Error fetching data. Please check your API key and try again.');
+                showToast('Error: ' + error.message);
             } finally {
                 document.getElementById('loadingOverlay').style.display = 'none';
             }
         }
 
         function processData(data) {
-            // Process the API response data
-            if (!data || !data.default || !data.default.timelineData) {
+            if (!data || !data.timelineData) {
                 return [];
             }
 
-            return data.default.timelineData.map(point => ({
-                date: new Date(point.time * 1000).toLocaleDateString(),
-                ...point.value.reduce((acc, val, idx) => {
-                    acc[`term${idx + 1}`] = val;
+            return data.timelineData.map(point => ({
+                date: new Date(point.timestamp * 1000).toLocaleDateString(),
+                ...point.values.reduce((acc, val, idx) => {
+                    acc[`term${idx + 1}`] = val.value;
                     return acc;
                 }, {})
             }));
@@ -766,6 +725,22 @@
             window.URL.revokeObjectURL(url);
         }
 
+        // Handle preset date buttons
+        document.getElementById('presetDates').addEventListener('click', (e) => {
+            if (e.target.classList.contains('preset-btn')) {
+                const days = parseInt(e.target.dataset.days);
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(endDate.getDate() - days);
+                
+                document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+                document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+                
+                document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+            }
+        });
+
         function updateTrends() {
             const terms = [
                 document.getElementById('searchTerm1').value,
@@ -781,7 +756,6 @@
         // Initialize the page
         window.onload = function() {
             updateGeoOptions();
-            // Set default search term
             document.getElementById('searchTerm1').value = 'financial literacy';
         }
     </script>
