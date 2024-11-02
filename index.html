@@ -554,7 +554,7 @@
             });
         }
 
-      async function fetchTrendsData(terms) {
+     async function fetchTrendsData(terms) {
     if (!validateDateRange()) {
         return;
     }
@@ -574,38 +574,45 @@
     document.getElementById('loadingOverlay').style.display = 'flex';
 
     try {
-        // Construct the base URL with API key
-        const baseUrl = 'https://trends.googleapis.com/trends/api/explore';
-        
-        // Create request parameters
+        // Build the URL with simple parameters
         const params = new URLSearchParams({
             key: 'AIzaSyAlcRThhHSKrYdqGxFj7a4iCvt7Q2NiALc'
         });
 
-        // Add search terms
-        validTerms.forEach(term => {
-            params.append('term', term);
+        // Add terms
+        validTerms.forEach((term, index) => {
+            params.append(`q${index}`, term);
         });
 
         // Add other parameters
-        params.append('geo', geoType === 'GLOBAL' ? '' : geoValue);
-        params.append('date', `${startDate} ${endDate}`);
+        params.append('start_date', startDate);
+        params.append('end_date', endDate);
+        params.append('geo', geoType === 'GLOBAL' ? 'GLOBAL' : geoValue);
         params.append('granularity', granularity);
 
-        // Make the API request
-        const response = await fetch(`${baseUrl}?${params.toString()}`);
+        const url = `https://trends.googleapis.com/v1/trends?${params.toString()}`;
+
+        // Make request with CORS headers
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            mode: 'cors'
+        });
 
         if (!response.ok) {
             throw new Error(`API request failed: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log('API Response:', data); // For debugging
+        console.log('API Response:', data);
         trendsData = processData(data);
         displayData(trendsData);
         displayChart(trendsData);
     } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Detailed error:', error);
         showToast('Error: ' + error.message);
     } finally {
         document.getElementById('loadingOverlay').style.display = 'none';
