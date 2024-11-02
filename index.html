@@ -554,7 +554,7 @@
             });
         }
 
-       async function fetchTrendsData(terms) {
+      async function fetchTrendsData(terms) {
     if (!validateDateRange()) {
         return;
     }
@@ -574,25 +574,33 @@
     document.getElementById('loadingOverlay').style.display = 'flex';
 
     try {
-        // Create the request parameters
+        // Construct the base URL with API key
+        const baseUrl = 'https://trends.googleapis.com/trends/api/explore';
+        
+        // Create request parameters
         const params = new URLSearchParams({
-            key: API_KEY, // API key in URL parameters
-            geo: geoType === 'GLOBAL' ? '' : geoValue,
-            time: `${startDate} ${endDate}`,
-            resolution: granularity.toLowerCase()
+            key: 'AIzaSyAlcRThhHSKrYdqGxFj7a4iCvt7Q2NiALc'
         });
 
-        const searchTermsParam = validTerms.map(term => `q=${encodeURIComponent(term)}`).join('&');
-        const url = `https://trends.googleapis.com/trends/api/explore?${params}&${searchTermsParam}`;
+        // Add search terms
+        validTerms.forEach(term => {
+            params.append('term', term);
+        });
+
+        // Add other parameters
+        params.append('geo', geoType === 'GLOBAL' ? '' : geoValue);
+        params.append('date', `${startDate} ${endDate}`);
+        params.append('granularity', granularity);
 
         // Make the API request
-        const response = await fetch(url);
+        const response = await fetch(`${baseUrl}?${params.toString()}`);
 
         if (!response.ok) {
             throw new Error(`API request failed: ${response.status}`);
         }
 
         const data = await response.json();
+        console.log('API Response:', data); // For debugging
         trendsData = processData(data);
         displayData(trendsData);
         displayChart(trendsData);
