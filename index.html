@@ -554,61 +554,55 @@
             });
         }
 
-        async function fetchTrendsData(terms) {
-            if (!validateDateRange()) {
-                return;
-            }
+       async function fetchTrendsData(terms) {
+    if (!validateDateRange()) {
+        return;
+    }
 
-            const validTerms = terms.filter(term => term.trim() !== '');
-            if (validTerms.length === 0) {
-                showToast('Please enter at least one search term');
-                return;
-            }
+    const validTerms = terms.filter(term => term.trim() !== '');
+    if (validTerms.length === 0) {
+        showToast('Please enter at least one search term');
+        return;
+    }
 
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            const geoType = document.getElementById('geoType').value;
-            const geoValue = document.getElementById('geoValue').value;
-            const granularity = document.getElementById('dataGranularity').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const geoType = document.getElementById('geoType').value;
+    const geoValue = document.getElementById('geoValue').value;
+    const granularity = document.getElementById('dataGranularity').value;
 
-            document.getElementById('loadingOverlay').style.display = 'flex';
+    document.getElementById('loadingOverlay').style.display = 'flex';
 
-            try {
-                // Create the request payload
-                const payload = {
-                    keywords: validTerms,
-                    startTime: new Date(startDate).toISOString(),
-                    endTime: new Date(endDate).toISOString(),
-                    geo: geoType === 'GLOBAL' ? '' : geoValue,
-                    resolution: granularity.toLowerCase()
-                };
+    try {
+        // Create the request parameters
+        const params = new URLSearchParams({
+            key: API_KEY, // API key in URL parameters
+            geo: geoType === 'GLOBAL' ? '' : geoValue,
+            time: `${startDate} ${endDate}`,
+            resolution: granularity.toLowerCase()
+        });
 
-                // Make the API request
-                const response = await fetch('https://trends.googleapis.com/v1beta/trends?' + new URLSearchParams({
-                    key: API_KEY
-                }), {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload)
-                });
+        const searchTermsParam = validTerms.map(term => `q=${encodeURIComponent(term)}`).join('&');
+        const url = `https://trends.googleapis.com/trends/api/explore?${params}&${searchTermsParam}`;
 
-                if (!response.ok) {
-                    throw new Error(`API request failed: ${response.status}`);
-                }
+        // Make the API request
+        const response = await fetch(url);
 
-                const data = await response.json();
-                trendsData = processData(data);
-                displayData(trendsData);
-                displayChart(trendsData);
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                showToast('Error: ' + error.message);
-            } finally {
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }
+        if (!response.ok) {
+            throw new Error(`API request failed: ${response.status}`);
         }
+
+        const data = await response.json();
+        trendsData = processData(data);
+        displayData(trendsData);
+        displayChart(trendsData);
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        showToast('Error: ' + error.message);
+    } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+}
 
         function processData(data) {
             if (!data || !data.timelineData) {
