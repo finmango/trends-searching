@@ -369,8 +369,7 @@
         <span class="material-icons" style="color: var(--fm-orange); font-size: 32px;">trending_up</span>
         <h1 class="page-title">FinMango Trends Analyzer</h1>
     </header>
-
-    <main class="container">
+<main class="container">
         <div class="card">
             <h2 class="section-title">
                 <span class="material-icons">date_range</span>
@@ -385,7 +384,7 @@
                 <button class="preset-btn" data-days="365">1 Year</button>
                 <button class="preset-btn" data-days="1825">5 Years</button>
                 <button class="preset-btn" data-days="3650">10 Years</button>
-                <button class="preset-btn active" data-days="5475">15 Years</button>
+                <button class="preset-btn" data-days="max">All Time (Since 2004)</button>
             </div>
 
             <div class="date-range-container">
@@ -455,7 +454,8 @@
                 </button>
             </div>
         </div>
-<div class="card">
+
+        <div class="card">
             <h2 class="section-title">
                 <span class="material-icons">analytics</span>
                 Trends Visualization
@@ -495,38 +495,154 @@
                 MX: "Mexico"
             },
             REGION: {
+                "US-AL": "Alabama",
+                "US-AK": "Alaska",
+                "US-AZ": "Arizona",
+                "US-AR": "Arkansas",
                 "US-CA": "California",
-                "US-NY": "New York",
-                "US-TX": "Texas",
+                "US-CO": "Colorado",
+                "US-CT": "Connecticut",
+                "US-DE": "Delaware",
                 "US-FL": "Florida",
-                "US-IL": "Illinois",
-                "US-PA": "Pennsylvania",
-                "US-OH": "Ohio",
                 "US-GA": "Georgia",
+                "US-HI": "Hawaii",
+                "US-ID": "Idaho",
+                "US-IL": "Illinois",
+                "US-IN": "Indiana",
+                "US-IA": "Iowa",
+                "US-KS": "Kansas",
+                "US-KY": "Kentucky",
+                "US-LA": "Louisiana",
+                "US-ME": "Maine",
+                "US-MD": "Maryland",
+                "US-MA": "Massachusetts",
                 "US-MI": "Michigan",
-                "US-NC": "North Carolina"
+                "US-MN": "Minnesota",
+                "US-MS": "Mississippi",
+                "US-MO": "Missouri",
+                "US-MT": "Montana",
+                "US-NE": "Nebraska",
+                "US-NV": "Nevada",
+                "US-NH": "New Hampshire",
+                "US-NJ": "New Jersey",
+                "US-NM": "New Mexico",
+                "US-NY": "New York",
+                "US-NC": "North Carolina",
+                "US-ND": "North Dakota",
+                "US-OH": "Ohio",
+                "US-OK": "Oklahoma",
+                "US-OR": "Oregon",
+                "US-PA": "Pennsylvania",
+                "US-RI": "Rhode Island",
+                "US-SC": "South Carolina",
+                "US-SD": "South Dakota",
+                "US-TN": "Tennessee",
+                "US-TX": "Texas",
+                "US-UT": "Utah",
+                "US-VT": "Vermont",
+                "US-VA": "Virginia",
+                "US-WA": "Washington",
+                "US-WV": "West Virginia",
+                "US-WI": "Wisconsin",
+                "US-WY": "Wyoming",
+                "US-DC": "District of Columbia"
             },
             DMA: {
                 "501": "New York",
                 "803": "Los Angeles",
-                "807": "San Francisco-Oakland-San Jose",
                 "602": "Chicago",
+                "504": "Philadelphia",
+                "807": "San Francisco-Oakland-San Jose",
                 "506": "Boston",
                 "623": "Dallas-Fort Worth",
+                "511": "Washington, DC",
+                "618": "Houston",
                 "528": "Miami-Fort Lauderdale",
-                "751": "Denver",
-                "819": "Cleveland",
-                "825": "San Diego"
+                "512": "Atlanta",
+                "535": "Detroit",
+                "669": "Phoenix",
+                "616": "Seattle-Tacoma",
+                "539": "Tampa-St. Petersburg",
+                "613": "Minneapolis-St. Paul",
+                "624": "Denver",
+                "505": "Cleveland-Akron",
+                "510": "Orlando-Daytona Beach",
+                "517": "Charlotte",
+                "534": "Portland, OR",
+                "508": "Pittsburgh",
+                "529": "Raleigh-Durham",
+                "532": "Sacramento-Stockton-Modesto",
+                "547": "Hartford-New Haven",
+                "551": "St. Louis",
+                "619": "Indianapolis",
+                "563": "Baltimore",
+                "544": "Norfolk-Portsmouth-Newport News",
+                "514": "San Diego",
+                "581": "Nashville",
+                "545": "Milwaukee",
+                "754": "Cincinnati",
+                "560": "Kansas City",
+                "765": "Grand Rapids-Kalamazoo",
+                "558": "Buffalo",
+                "566": "Tulsa",
+                "561": "Jacksonville",
+                "624": "Salt Lake City",
+                "632": "Austin",
+                "635": "Memphis",
+                "641": "San Antonio",
+                "686": "Mobile-Pensacola",
+                "691": "Fresno-Visalia",
+                "693": "Las Vegas",
+                "709": "Oklahoma City",
+                "711": "Providence-New Bedford",
+                "717": "Albuquerque-Santa Fe",
+                "725": "Birmingham",
+                "734": "West Palm Beach-Ft. Pierce",
+                "737": "Louisville",
+                "744": "Harrisburg-Lancaster-Lebanon-York",
+                "746": "Richmond-Petersburg",
+                "751": "New Orleans",
+                "757": "Albany-Schenectady-Troy",
+                "767": "Syracuse",
+                "770": "Toledo",
+                "789": "Rochester, NY",
+                "798": "Spokane",
+                "810": "Dayton",
+                "819": "Tucson",
+                "820": "Wichita-Hutchinson",
+                "825": "Greensboro-High Point-Winston Salem",
+                "839": "Knoxville",
+                "855": "Columbia, SC",
+                "862": "Reno",
+                "866": "Des Moines-Ames",
+                "868": "Green Bay-Appleton",
+                "881": "Madison",
+                "893": "Chattanooga",
+                "897": "Charleston, SC",
+                "900": "Huntsville-Decatur",
+                "919": "Little Rock-Pine Bluff",
+                "921": "Fort Myers-Naples",
+                "933": "Baton Rouge",
+                "959": "Savannah",
+                "961": "Lexington",
+                "963": "Charleston-Huntington",
+                "966": "Flint-Saginaw-Bay City",
+                "976": "Shreveport",
+                "986": "Cedar Rapids-Waterloo-Iowa City",
+                "988": "Jackson, MS",
+                "993": "Montgomery-Selma",
+                "996": "South Bend-Elkhart"
             }
         };
 
-        // Initialize date pickers
+// Initialize date handling
         const today = new Date();
-        const fifteenYearsAgo = new Date();
-        fifteenYearsAgo.setFullYear(today.getFullYear() - 15);
+        const trendsStartDate = new Date('2004-01-01');
 
+        // Initialize date pickers
         flatpickr('.date-picker', {
             maxDate: 'today',
+            minDate: '2004-01-01',
             dateFormat: 'Y-m-d',
             onChange: function(selectedDates, dateStr, instance) {
                 validateDateRange();
@@ -534,7 +650,7 @@
         });
 
         // Initialize start and end dates
-        document.getElementById('startDate').value = fifteenYearsAgo.toISOString().split('T')[0];
+        document.getElementById('startDate').value = trendsStartDate.toISOString().split('T')[0];
         document.getElementById('endDate').value = today.toISOString().split('T')[0];
 
         function addSearchTerm() {
@@ -674,24 +790,12 @@
                 return false;
             }
 
-            const diffTime = Math.abs(endDate - startDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            if (diffDays > 5475) {
-                showToast('Date range cannot exceed 15 years');
+            if (startDate < trendsStartDate) {
+                showToast('Start date cannot be earlier than January 2004');
                 return false;
             }
 
             return true;
-        }
-
-        function showToast(message, duration = 3000) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.style.display = 'block';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, duration);
         }
 
 async function fetchTrendsData(terms) {
@@ -889,13 +993,32 @@ async function fetchTrendsData(terms) {
             window.URL.revokeObjectURL(url);
         }
 
+        function showToast(message, duration = 3000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, duration);
+        }
+
         // Handle preset date buttons
         document.getElementById('presetDates').addEventListener('click', (e) => {
             if (e.target.classList.contains('preset-btn')) {
-                const days = parseInt(e.target.dataset.days);
+                const days = e.target.dataset.days;
                 const endDate = new Date();
-                const startDate = new Date();
-                startDate.setDate(endDate.getDate() - days);
+                let startDate;
+
+                if (days === 'max') {
+                    startDate = new Date('2004-01-01');
+                } else {
+                    startDate = new Date();
+                    startDate.setDate(endDate.getDate() - parseInt(days));
+                    // Ensure we don't go before 2004
+                    if (startDate < trendsStartDate) {
+                        startDate = new Date(trendsStartDate);
+                    }
+                }
                 
                 document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
                 document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
@@ -916,8 +1039,15 @@ async function fetchTrendsData(terms) {
         // Initialize the page
         window.onload = function() {
             updateGeoOptions();
-            addSearchTerm(); // Add first search term
+            addSearchTerm();
             document.querySelector('.search-term').value = 'financial literacy';
+            
+            // Set initial date range to max available range
+            document.getElementById('startDate').value = trendsStartDate.toISOString().split('T')[0];
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            
+            // Set "All Time" as default active button
+            document.querySelector('[data-days="max"]').classList.add('active');
             
             // Test backend connection
             fetch(`${BACKEND_URL}/health`)
