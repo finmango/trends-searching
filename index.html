@@ -455,10 +455,9 @@
                 </button>
             </div>
         </div>
-
-        <div class="card">
+<div class="card">
             <h2 class="section-title">
-<span class="material-icons">analytics</span>
+                <span class="material-icons">analytics</span>
                 Trends Visualization
             </h2>
             <div id="trendsChart" class="chart-container"></div>
@@ -686,7 +685,16 @@
             return true;
         }
 
-        async function fetchTrendsData(terms) {
+        function showToast(message, duration = 3000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, duration);
+        }
+
+async function fetchTrendsData(terms) {
             if (!validateDateRange()) return;
 
             const validTerms = terms.filter(term => term.trim() !== '');
@@ -747,11 +755,15 @@
         }
 
         function mergeLocationData(jsonData, geoValues) {
+            const searchTerms = Array.from(document.querySelectorAll('.search-term'))
+                .map(input => input.value.trim())
+                .filter(term => term !== '');
+
             if (geoValues.length <= 1) {
                 return jsonData[0].default.timelineData.map(point => ({
                     date: new Date(point.time * 1000).toLocaleDateString(),
                     ...point.value.reduce((acc, val, idx) => {
-                        acc[`term${idx + 1}`] = val;
+                        acc[searchTerms[idx]] = val;
                         return acc;
                     }, {})
                 }));
@@ -766,7 +778,8 @@
                         timeMap.set(date, { date });
                     }
                     point.value.forEach((val, termIndex) => {
-                        timeMap.get(date)[`term${termIndex + 1}_${geoValues[locationIndex]}`] = val;
+                        const label = `${searchTerms[termIndex]} (${geoData[document.getElementById('geoType').value][geoValues[locationIndex]] || geoValues[locationIndex]})`;
+                        timeMap.get(date)[label] = val;
                     });
                 });
             });
@@ -787,7 +800,7 @@
             const headerRow = document.createElement('tr');
             headers.forEach(header => {
                 const th = document.createElement('th');
-                th.textContent = header.charAt(0).toUpperCase() + header.slice(1);
+                th.textContent = header === 'date' ? 'Date' : header;
                 headerRow.appendChild(th);
             });
             table.appendChild(headerRow);
@@ -826,7 +839,10 @@
                 const options = {
                     title: 'Google Trends Data',
                     curveType: 'function',
-                    legend: { position: 'bottom' },
+                    legend: { 
+                        position: 'bottom',
+                        maxLines: 3
+                    },
                     colors: ['#FF8A2B', '#4CAF50', '#2196F3', '#9C27B0', '#FF5722'],
                     backgroundColor: '#FFFFFF',
                     chartArea: {
@@ -838,7 +854,9 @@
                         minValue: 0
                     },
                     hAxis: {
-                        title: 'Date'
+                        title: 'Date',
+                        slantedText: true,
+                        slantedTextAngle: 30
                     }
                 };
 
@@ -871,21 +889,12 @@
             window.URL.revokeObjectURL(url);
         }
 
-        function showToast(message, duration = 3000) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.style.display = 'block';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, duration);
-        }
-
         // Handle preset date buttons
         document.getElementById('presetDates').addEventListener('click', (e) => {
             if (e.target.classList.contains('preset-btn')) {
                 const days = parseInt(e.target.dataset.days);
                 const endDate = new Date();
-    const startDate = new Date();
+                const startDate = new Date();
                 startDate.setDate(endDate.getDate() - days);
                 
                 document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
