@@ -174,10 +174,63 @@
         }
 
         .search-terms {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            display: flex;
+            flex-direction: column;
             gap: 16px;
             margin-bottom: 24px;
+        }
+
+        .term-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .remove-btn {
+            background: none;
+            border: none;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-speed);
+        }
+
+        .remove-btn:hover {
+            background: var(--state-hover);
+            color: #DC3545;
+        }
+
+        .add-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--fm-orange);
+            background: none;
+            border: 2px dashed var(--fm-orange);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all var(--transition-speed);
+        }
+
+        .add-btn:hover {
+            background: var(--state-hover);
+        }
+
+        .custom-locations {
+            margin-top: 16px;
+        }
+
+        .location-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: flex-end;
         }
 
         .button-container {
@@ -359,10 +412,11 @@
                         <option value="COUNTRY">Country</option>
                         <option value="REGION">Region</option>
                         <option value="DMA">DMA (Metro Area)</option>
+                        <option value="CUSTOM">Custom Locations</option>
                     </select>
                 </div>
 
-                <div class="input-field">
+                <div id="standardGeoSelection" class="input-field">
                     <label class="input-label" for="geoValue">Geographic Area</label>
                     <select id="geoValue" class="input-control" disabled>
                         <option value="">Select area...</option>
@@ -370,28 +424,25 @@
                 </div>
             </div>
 
+            <div id="customLocations" class="custom-locations" style="display: none;">
+                <div id="locationsList"></div>
+                <button onclick="addLocation()" class="add-btn">
+                    <span class="material-icons">add</span>
+                    Add Location
+                </button>
+            </div>
+
             <h2 class="section-title">
                 <span class="material-icons">search</span>
                 Search Terms
             </h2>
             
-            <div class="search-terms">
-                <div class="input-field">
-                    <input type="text" id="searchTerm1" class="input-control" placeholder="Enter search term 1">
-                </div>
-                <div class="input-field">
-                    <input type="text" id="searchTerm2" class="input-control" placeholder="Enter search term 2">
-                </div>
-                <div class="input-field">
-                    <input type="text" id="searchTerm3" class="input-control" placeholder="Enter search term 3">
-                </div>
-                <div class="input-field">
-                    <input type="text" id="searchTerm4" class="input-control" placeholder="Enter search term 4">
-                </div>
-                <div class="input-field">
-                    <input type="text" id="searchTerm5" class="input-control" placeholder="Enter search term 5">
-                </div>
-            </div>
+            <div id="searchTermsList" class="search-terms"></div>
+            
+            <button onclick="addSearchTerm()" class="add-btn">
+                <span class="material-icons">add</span>
+                Add Search Term
+            </button>
 
             <div class="button-container">
                 <button onclick="updateTrends()" class="btn btn-primary">
@@ -407,7 +458,7 @@
 
         <div class="card">
             <h2 class="section-title">
-                <span class="material-icons">analytics</span>
+<span class="material-icons">analytics</span>
                 Trends Visualization
             </h2>
             <div id="trendsChart" class="chart-container"></div>
@@ -425,6 +476,10 @@
         const BACKEND_URL = 'https://finmango-trends-backend.onrender.com';
         
         let trendsData = [];
+        let searchTermCount = 0;
+        let locationCount = 0;
+        const MAX_SEARCH_TERMS = 20;
+        const MAX_LOCATIONS = 10;
 
         // Geographic data
         const geoData = {
@@ -483,10 +538,156 @@
         document.getElementById('startDate').value = fifteenYearsAgo.toISOString().split('T')[0];
         document.getElementById('endDate').value = today.toISOString().split('T')[0];
 
-        async function fetchTrendsData(terms) {
-            if (!validateDateRange()) {
+        function addSearchTerm() {
+            if (searchTermCount >= MAX_SEARCH_TERMS) {
+                showToast(`Maximum ${MAX_SEARCH_TERMS} search terms allowed`);
                 return;
             }
+
+            const termsList = document.getElementById('searchTermsList');
+            const termRow = document.createElement('div');
+            termRow.className = 'term-row';
+            termRow.innerHTML = `
+                <div class="input-field" style="flex: 1;">
+                    <input type="text" class="input-control search-term" 
+                           placeholder="Enter search term ${searchTermCount + 1}">
+                </div>
+                <button class="remove-btn" onclick="removeSearchTerm(this)">
+                    <span class="material-icons">close</span>
+                </button>
+            `;
+            termsList.appendChild(termRow);
+            searchTermCount++;
+        }
+
+        function removeSearchTerm(button) {
+            button.closest('.term-row').remove();
+            searchTermCount--;
+            updateSearchTermPlaceholders();
+        }
+
+        function updateSearchTermPlaceholders() {
+            const inputs = document.querySelectorAll('.search-term');
+            inputs.forEach((input, index) => {
+                input.placeholder = `Enter search term ${index + 1}`;
+            });
+        }
+
+        function addLocation() {
+            if (locationCount >= MAX_LOCATIONS) {
+                showToast(`Maximum ${MAX_LOCATIONS} locations allowed`);
+                return;
+            }
+
+            const locationsList = document.getElementById('locationsList');
+            const locationRow = document.createElement('div');
+            locationRow.className = 'location-row';
+            locationRow.innerHTML = `
+                <div class="input-field" style="flex: 1;">
+                    <label class="input-label">Location ${locationCount + 1}</label>
+                    <select class="input-control location-type" onchange="updateLocationValue(this)">
+                        <option value="COUNTRY">Country</option>
+                        <option value="REGION">Region</option>
+                        <option value="DMA">DMA (Metro Area)</option>
+                    </select>
+                </div>
+                <div class="input-field" style="flex: 2;">
+                    <label class="input-label">Area</label>
+                    <select class="input-control location-value">
+                        <option value="">Select area...</option>
+                    </select>
+                </div>
+                <button class="remove-btn" onclick="removeLocation(this)" style="margin-bottom: 8px;">
+                    <span class="material-icons">close</span>
+                </button>
+            `;
+            locationsList.appendChild(locationRow);
+            updateLocationValue(locationRow.querySelector('.location-type'));
+            locationCount++;
+        }
+
+        function removeLocation(button) {
+            button.closest('.location-row').remove();
+            locationCount--;
+            updateLocationLabels();
+        }
+
+        function updateLocationLabels() {
+            const labels = document.querySelectorAll('.location-row .input-label');
+            labels.forEach((label, index) => {
+                if (label.textContent.startsWith('Location')) {
+                    label.textContent = `Location ${index + 1}`;
+                }
+            });
+        }
+
+        function updateLocationValue(select) {
+            const locationValueSelect = select.closest('.location-row').querySelector('.location-value');
+            const locationType = select.value;
+            locationValueSelect.innerHTML = '<option value="">Select area...</option>';
+            
+            const options = geoData[locationType] || {};
+            Object.entries(options).forEach(([value, label]) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                locationValueSelect.appendChild(option);
+            });
+        }
+
+        function updateGeoOptions() {
+            const geoType = document.getElementById('geoType').value;
+            const standardGeo = document.getElementById('standardGeoSelection');
+            const customGeo = document.getElementById('customLocations');
+            
+            if (geoType === 'CUSTOM') {
+                standardGeo.style.display = 'none';
+                customGeo.style.display = 'block';
+                if (locationCount === 0) addLocation();
+            } else {
+                standardGeo.style.display = 'block';
+                customGeo.style.display = 'none';
+                const geoSelect = document.getElementById('geoValue');
+                geoSelect.innerHTML = '<option value="">Select area...</option>';
+                
+                if (geoType === 'GLOBAL') {
+                    geoSelect.disabled = true;
+                    return;
+                }
+
+                geoSelect.disabled = false;
+                const options = geoData[geoType] || {};
+                Object.entries(options).forEach(([value, label]) => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = label;
+                    geoSelect.appendChild(option);
+                });
+            }
+        }
+
+        function validateDateRange() {
+            const startDate = new Date(document.getElementById('startDate').value);
+            const endDate = new Date(document.getElementById('endDate').value);
+            
+            if (endDate < startDate) {
+                showToast('End date must be after start date');
+                return false;
+            }
+
+            const diffTime = Math.abs(endDate - startDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays > 5475) {
+                showToast('Date range cannot exceed 15 years');
+                return false;
+            }
+
+            return true;
+        }
+
+        async function fetchTrendsData(terms) {
+            if (!validateDateRange()) return;
 
             const validTerms = terms.filter(term => term.trim() !== '');
             if (validTerms.length === 0) {
@@ -497,35 +698,44 @@
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
             const geoType = document.getElementById('geoType').value;
-            const geoValue = document.getElementById('geoValue').value;
+            
+            let geoValues = [];
+            if (geoType === 'CUSTOM') {
+                const locationRows = document.querySelectorAll('.location-row');
+                locationRows.forEach(row => {
+                    const value = row.querySelector('.location-value').value;
+                    if (value) geoValues.push(value);
+                });
+            } else if (geoType !== 'GLOBAL') {
+                const geoValue = document.getElementById('geoValue').value;
+                if (geoValue) geoValues.push(geoValue);
+            }
 
             document.getElementById('loadingOverlay').style.display = 'flex';
 
             try {
-                const params = new URLSearchParams({
-                    terms: validTerms.join(','),
-                    startDate: startDate,
-                    endDate: endDate,
-                    geo: geoType === 'GLOBAL' ? '' : geoValue
-                });
+                const requests = geoValues.length > 0 ? 
+                    geoValues.map(geo => {
+                        const params = new URLSearchParams({
+                            terms: validTerms.join(','),
+                            startDate: startDate,
+                            endDate: endDate,
+                            geo: geo
+                        });
+                        return fetch(`${BACKEND_URL}/api/trends?${params}`);
+                    }) : 
+                    [fetch(`${BACKEND_URL}/api/trends?${new URLSearchParams({
+                        terms: validTerms.join(','),
+                        startDate: startDate,
+                        endDate: endDate,
+                        geo: ''
+                    })}`)];
 
-                const response = await fetch(`${BACKEND_URL}/api/trends?${params}`);
-
-                if (!response.ok) {
-                    throw new Error(`API request failed: ${response.status}`);
-                }
-
-                const data = await response.json();
-                console.log('API Response:', data);
-
-                trendsData = data.default.timelineData.map(point => ({
-                    date: new Date(point.time * 1000).toLocaleDateString(),
-                    ...point.value.reduce((acc, val, idx) => {
-                        acc[`term${idx + 1}`] = val;
-                        return acc;
-                    }, {})
-                }));
-
+                const responses = await Promise.all(requests);
+                const jsonData = await Promise.all(responses.map(r => r.json()));
+                
+                trendsData = mergeLocationData(jsonData, geoValues);
+                
                 displayData(trendsData);
                 displayChart(trendsData);
             } catch (error) {
@@ -534,6 +744,34 @@
             } finally {
                 document.getElementById('loadingOverlay').style.display = 'none';
             }
+        }
+
+        function mergeLocationData(jsonData, geoValues) {
+            if (geoValues.length <= 1) {
+                return jsonData[0].default.timelineData.map(point => ({
+                    date: new Date(point.time * 1000).toLocaleDateString(),
+                    ...point.value.reduce((acc, val, idx) => {
+                        acc[`term${idx + 1}`] = val;
+                        return acc;
+                    }, {})
+                }));
+            }
+
+            const timeMap = new Map();
+            
+            jsonData.forEach((data, locationIndex) => {
+                data.default.timelineData.forEach(point => {
+                    const date = new Date(point.time * 1000).toLocaleDateString();
+                    if (!timeMap.has(date)) {
+                        timeMap.set(date, { date });
+                    }
+                    point.value.forEach((val, termIndex) => {
+                        timeMap.get(date)[`term${termIndex + 1}_${geoValues[locationIndex]}`] = val;
+                    });
+                });
+            });
+
+            return Array.from(timeMap.values());
         }
 
         function displayData(data) {
@@ -545,7 +783,6 @@
                 return;
             }
 
-            // Create headers
             const headers = Object.keys(data[0]);
             const headerRow = document.createElement('tr');
             headers.forEach(header => {
@@ -555,7 +792,6 @@
             });
             table.appendChild(headerRow);
 
-            // Create data rows
             data.forEach(row => {
                 const tr = document.createElement('tr');
                 headers.forEach(header => {
@@ -577,13 +813,11 @@
                 const dataTable = new google.visualization.DataTable();
                 dataTable.addColumn('string', 'Date');
                 
-                // Add columns for each term
                 const terms = Object.keys(data[0]).filter(key => key !== 'date');
                 terms.forEach(term => {
                     dataTable.addColumn('number', term);
                 });
 
-                // Add rows
                 const chartData = data.map(point => {
                     return [point.date, ...terms.map(term => point[term])];
                 });
@@ -646,53 +880,12 @@
             }, duration);
         }
 
-        function validateDateRange() {
-            const startDate = new Date(document.getElementById('startDate').value);
-            const endDate = new Date(document.getElementById('endDate').value);
-            
-            if (endDate < startDate) {
-                showToast('End date must be after start date');
-                return false;
-            }
-
-            const diffTime = Math.abs(endDate - startDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            if (diffDays > 5475) {
-                showToast('Date range cannot exceed 15 years');
-                return false;
-            }
-
-            return true;
-        }
-
-        function updateGeoOptions() {
-            const geoType = document.getElementById('geoType').value;
-            const geoSelect = document.getElementById('geoValue');
-            geoSelect.innerHTML = '<option value="">Select area...</option>';
-            
-            if (geoType === 'GLOBAL') {
-                geoSelect.disabled = true;
-                return;
-            }
-
-            geoSelect.disabled = false;
-            const options = geoData[geoType] || {};
-            
-            Object.entries(options).forEach(([value, label]) => {
-                const option = document.createElement('option');
-                option.value = value;
-                option.textContent = label;
-                geoSelect.appendChild(option);
-            });
-        }
-
         // Handle preset date buttons
         document.getElementById('presetDates').addEventListener('click', (e) => {
             if (e.target.classList.contains('preset-btn')) {
                 const days = parseInt(e.target.dataset.days);
                 const endDate = new Date();
-                const startDate = new Date();
+    const startDate = new Date();
                 startDate.setDate(endDate.getDate() - days);
                 
                 document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
@@ -704,13 +897,9 @@
         });
 
         function updateTrends() {
-            const terms = [
-                document.getElementById('searchTerm1').value,
-                document.getElementById('searchTerm2').value,
-                document.getElementById('searchTerm3').value,
-                document.getElementById('searchTerm4').value,
-                document.getElementById('searchTerm5').value
-            ].filter(term => term.trim() !== '');
+            const terms = Array.from(document.querySelectorAll('.search-term'))
+                .map(input => input.value)
+                .filter(term => term.trim() !== '');
 
             fetchTrendsData(terms);
         }
@@ -718,7 +907,8 @@
         // Initialize the page
         window.onload = function() {
             updateGeoOptions();
-            document.getElementById('searchTerm1').value = 'financial literacy';
+            addSearchTerm(); // Add first search term
+            document.querySelector('.search-term').value = 'financial literacy';
             
             // Test backend connection
             fetch(`${BACKEND_URL}/health`)
