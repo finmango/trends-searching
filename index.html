@@ -407,11 +407,9 @@
                 <div class="input-field">
                     <label class="input-label" for="geoType">Geographic Level</label>
                     <select id="geoType" class="input-control" onchange="updateGeoOptions()">
-                        <option value="GLOBAL">Global</option>
                         <option value="COUNTRY">Country</option>
                         <option value="REGION">Region</option>
                         <option value="DMA">DMA (Metro Area)</option>
-                        <option value="CUSTOM">Custom Locations</option>
                     </select>
                 </div>
 
@@ -472,7 +470,7 @@
 
     <script>
         // Backend URL
-        const BACKEND_URL = 'https://finmango-trends-backend.onrender.com';
+        const BACKEND_URL = 'https://trends-microservice.onrender.com';
         
         let trendsData = [];
         let searchTermCount = 0;
@@ -799,97 +797,122 @@
         }
 
 async function fetchTrendsData(terms) {
-            if (!validateDateRange()) return;
+    if (!validateDateRange()) return;
 
-            const validTerms = terms.filter(term => term.trim() !== '');
-            if (validTerms.length === 0) {
-                showToast('Please enter at least one search term');
-                return;
+    const validTerms = terms.filter(term => term.trim() !== '');
+    if (validTerms.length === 0) {
+        showToast('Please enter at least one search term');
+        return;
+    }
+
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const geoType = document.getElementById('geoType').value;
+    
+    let geoValues = [];
+    if (geoType === 'CUSTOM') {
+        const locationRows = document.querySelectorAll('.location-row');
+        locationRows.forEach(row => {
+            const value = row.querySelector('.location-value').value;
+            if (value) geoValues.push(value);
+        });
+    } else if (geoType !== 'GLOBAL') {
+        const geoValue = document.getElementById('geoValue').value;
+        if (geoValue) geoValues.push(geoValue);
+    }
+
+    document.getElementById('loadingOverlay').style.display = 'flex';
+
+    
+    let geoRestriction = ""
+
+            if (geoType == 'COUNTRY'){
+                geoRestriction = 'country'
+            } else if (geoType == 'dma'){
+                geoRestriction == 'dma'
+            } else if (geoType == 'region') {
+                geoRestriction = 'region'
             }
 
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            const geoType = document.getElementById('geoType').value;
-            
-            let geoValues = [];
-            if (geoType === 'CUSTOM') {
-                const locationRows = document.querySelectorAll('.location-row');
-                locationRows.forEach(row => {
-                    const value = row.querySelector('.location-value').value;
-                    if (value) geoValues.push(value);
+    try {
+        const requests = geoValues.length > 0 ? 
+            geoValues.map(geo => {
+                const params = new URLSearchParams({
+                    terms: validTerms.join(','),
+                    startDate: startDate,
+                    endDate: endDate,
+                    geo: geo,
+                    geo_restriction: geoRestriction
                 });
-            } else if (geoType !== 'GLOBAL') {
-                const geoValue = document.getElementById('geoValue').value;
-                if (geoValue) geoValues.push(geoValue);
-            }
+                return fetch(`${BACKEND_URL}/search-trends?${params}`);
+            }) : 
+            [fetch(`${BACKEND_URL}/search-trends?${new URLSearchParams({
+                terms: validTerms.join(','),
+                startDate: startDate,
+                endDate: endDate,
+                geo: ''
+            })}`)];
 
-            document.getElementById('loadingOverlay').style.display = 'flex';
-
-            try {
-                const requests = geoValues.length > 0 ? 
-                    geoValues.map(geo => {
-                        const params = new URLSearchParams({
-                            terms: validTerms.join(','),
-                            startDate: startDate,
-                            endDate: endDate,
-                            geo: geo
-                        });
-                        return fetch(`${BACKEND_URL}/api/trends?${params}`);
-                    }) : 
-                    [fetch(`${BACKEND_URL}/api/trends?${new URLSearchParams({
-                        terms: validTerms.join(','),
-                        startDate: startDate,
-                        endDate: endDate,
-                        geo: ''
-                    })}`)];
-
-                const responses = await Promise.all(requests);
-                const jsonData = await Promise.all(responses.map(r => r.json()));
-                
-                trendsData = mergeLocationData(jsonData, geoValues);
-                
-                displayData(trendsData);
-                displayChart(trendsData);
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('Error fetching trends data. Please try again later.');
-            } finally {
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }
+        const responses = await Promise.all(requests);
+        const jsonData = await Promise.all(responses.map(r => r.json()));
+        
+        // Verify the data structure
+        if (!jsonData[0]?.default?.timelineData) {
+            throw new Error('Invalid data format received');
         }
+        
+        trendsData = mergeLocationData(jsonData, geoValues);
+        
+        displayData(trendsData);
+        displayChart(trendsData);
 
-        function mergeLocationData(jsonData, geoValues) {
-            const searchTerms = Array.from(document.querySelectorAll('.search-term'))
-                .map(input => input.value.trim())
-                .filter(term => term !== '');
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error fetching trends data. Please try again later.');
+    } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+}
 
-            if (geoValues.length <= 1) {
-                return jsonData[0].default.timelineData.map(point => ({
-                    date: new Date(point.time * 1000).toLocaleDateString(),
-                    ...point.value.reduce((acc, val, idx) => {
-                        acc[searchTerms[idx]] = val;
-                        return acc;
-                    }, {})
-                }));
+function mergeLocationData(jsonData, geoValues) {
+    // For single location or global search
+    if (geoValues.length <= 1) {
+        // Group by date and transform into the chart-friendly format
+        const dateMap = new Map();
+        
+        jsonData[0].default.timelineData.forEach(point => {
+            const date = point.date;
+            if (!dateMap.has(date)) {
+                dateMap.set(date, { date });
             }
+            dateMap.get(date)[point.term] = point.value;
+        });
+        
+        return Array.from(dateMap.values());
+    }
 
-            const timeMap = new Map();
-            
-            jsonData.forEach((data, locationIndex) => {
-                data.default.timelineData.forEach(point => {
-                    const date = new Date(point.time * 1000).toLocaleDateString();
-                    if (!timeMap.has(date)) {
-                        timeMap.set(date, { date });
-                    }
-                    point.value.forEach((val, termIndex) => {
-                        const label = `${searchTerms[termIndex]} (${geoData[document.getElementById('geoType').value][geoValues[locationIndex]] || geoValues[locationIndex]})`;
-                        timeMap.get(date)[label] = val;
-                    });
-                });
-            });
+    // For multiple locations
+    const timeMap = new Map();
+    
+    jsonData.forEach((data, locationIndex) => {
+        const locationName = geoData[document.getElementById('geoType').value][geoValues[locationIndex]] || geoValues[locationIndex];
+        
+        data.default.timelineData.forEach(point => {
+            const date = point.date;
+            if (!timeMap.has(date)) {
+                timeMap.set(date, { date });
+            }
+            // Create a location-specific term name (e.g., "financial literacy (New York)")
+            const termWithLocation = `${point.term} (${locationName})`;
+            timeMap.get(date)[termWithLocation] = point.value;
+        });
+    });
 
-            return Array.from(timeMap.values());
-        }
+    return Array.from(timeMap.values());
+}
+
+
+
 
         function displayData(data) {
             const table = document.createElement('table');
