@@ -383,8 +383,6 @@
                 <button class="preset-btn" data-days="180">6 Months</button>
                 <button class="preset-btn" data-days="365">1 Year</button>
                 <button class="preset-btn" data-days="1825">5 Years</button>
-                <button class="preset-btn" data-days="3650">10 Years</button>
-                <button class="preset-btn" data-days="max">All Time (Since 2004)</button>
             </div>
 
             <div class="date-range-container">
@@ -408,7 +406,7 @@
                     <label class="input-label" for="geoType">Geographic Level</label>
                     <select id="geoType" class="input-control" onchange="updateGeoOptions()">
                         <option value="COUNTRY">Country</option>
-                        <option value="REGION">Region</option>
+                        <option value="REGION"> US State</option>
                         <option value="DMA">DMA (Metro Area)</option>
                     </select>
                 </div>
@@ -436,10 +434,12 @@
             
             <div id="searchTermsList" class="search-terms"></div>
             
-            <button onclick="addSearchTerm()" class="add-btn">
-                <span class="material-icons">add</span>
-                Add Search Term
-            </button>
+            <!--  
+                <button onclick="addSearchTerm()" class="add-btn">
+                    <span class="material-icons">add</span>
+                    Add Search Term
+                </button>
+            -->
 
             <div class="button-container">
                 <button onclick="updateTrends()" class="btn btn-primary">
@@ -634,9 +634,11 @@
         };
 
 // Initialize date handling
-        const today = new Date();
-        const trendsStartDate = new Date('2004-01-01');
-
+        const today = new Date(); 
+        let date = new Date(new Date().setDate(new Date().getDate() - 1825))
+        const trendsStartDate = new Date(year=date.getUTCFullYear(), month=date.getMonth(), day=date.getDate())
+        
+        console.log(trendsStartDate)
         // Initialize date pickers
         flatpickr('.date-picker', {
             maxDate: 'today',
@@ -780,8 +782,25 @@
         }
 
         function validateDateRange() {
-            const startDate = new Date(document.getElementById('startDate').value);
-            const endDate = new Date(document.getElementById('endDate').value);
+            let stripped_date = document.getElementById('startDate').value.split("-")
+            let year = parseInt(stripped_date[0])
+            let month = parseInt(stripped_date[1]) - 1
+            let day = parseInt(stripped_date[2])
+            console.log(year)
+            console.log(month)
+            console.log(day)
+            const startDate = new Date(year,month,day);
+            
+
+            stripped_date = document.getElementById('endDate').value.split("-")
+            year = parseInt(stripped_date[0])
+            month = parseInt(month[1]) - 1
+            day = parseInt(stripped_date[2])
+            
+            const endDate = new Date(year,month,day);
+
+            console.log(startDate)
+            console.log(trendsStartDate)
             
             if (endDate < startDate) {
                 showToast('End date must be after start date');
@@ -828,9 +847,9 @@ async function fetchTrendsData(terms) {
 
             if (geoType == 'COUNTRY'){
                 geoRestriction = 'country'
-            } else if (geoType == 'dma'){
+            } else if (geoType == 'DMA'){
                 geoRestriction == 'dma'
-            } else if (geoType == 'region') {
+            } else if (geoType == 'REGION') {
                 geoRestriction = 'region'
             }
 
@@ -842,11 +861,12 @@ async function fetchTrendsData(terms) {
                     startDate: startDate,
                     endDate: endDate,
                     geo: geo,
-                    geo_restriction: geoRestriction
+                    geo_restriction: geoRestriction,
+                    freq: 'day'
                 });
-                return fetch(`${BACKEND_URL}/search-trends?${params}`);
+                return fetch(`${BACKEND_URL}/search-terms?${params}`);
             }) : 
-            [fetch(`${BACKEND_URL}/search-trends?${new URLSearchParams({
+            [fetch(`${BACKEND_URL}/search-terms?${new URLSearchParams({
                 terms: validTerms.join(','),
                 startDate: startDate,
                 endDate: endDate,
@@ -1029,14 +1049,17 @@ function mergeLocationData(jsonData, geoValues) {
         document.getElementById('presetDates').addEventListener('click', (e) => {
             if (e.target.classList.contains('preset-btn')) {
                 const days = e.target.dataset.days;
-                const endDate = new Date();
+                let endDate = new Date();
+                
                 let startDate;
 
                 if (days === 'max') {
                     startDate = new Date('2004-01-01');
                 } else {
                     startDate = new Date();
+                    
                     startDate.setDate(endDate.getDate() - parseInt(days));
+                    startDate.setHours(0,0,0,0)
                     // Ensure we don't go before 2004
                     if (startDate < trendsStartDate) {
                         startDate = new Date(trendsStartDate);
@@ -1070,7 +1093,7 @@ function mergeLocationData(jsonData, geoValues) {
             document.getElementById('endDate').value = today.toISOString().split('T')[0];
             
             // Set "All Time" as default active button
-            document.querySelector('[data-days="max"]').classList.add('active');
+            document.querySelector('[data-days="1825"]').classList.add('active');
             
             // Test backend connection
             fetch(`${BACKEND_URL}/health`)
