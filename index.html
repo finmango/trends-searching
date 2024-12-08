@@ -910,25 +910,6 @@ function mergeLocationData(jsonData, geoValues) {
         
         return Array.from(dateMap.values());
     }
-
-    // For multiple locations
-    const timeMap = new Map();
-    
-    jsonData.forEach((data, locationIndex) => {
-        const locationName = geoData[document.getElementById('geoType').value][geoValues[locationIndex]] || geoValues[locationIndex];
-        
-        data.default.timelineData.forEach(point => {
-            const date = point.date;
-            if (!timeMap.has(date)) {
-                timeMap.set(date, { date });
-            }
-            // Create a location-specific term name (e.g., "financial literacy (New York)")
-            const termWithLocation = `${point.term} (${locationName})`;
-            timeMap.get(date)[termWithLocation] = point.value;
-        });
-    });
-
-    return Array.from(timeMap.values());
 }
 
 
