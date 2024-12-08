@@ -638,7 +638,7 @@
         let date = new Date(new Date().setDate(new Date().getDate() - 1825))
         const trendsStartDate = new Date(year=date.getUTCFullYear(), month=date.getMonth(), day=date.getDate())
         
-        console.log(trendsStartDate)
+        
         // Initialize date pickers
         flatpickr('.date-picker', {
             maxDate: 'today',
@@ -786,9 +786,7 @@
             let year = parseInt(stripped_date[0])
             let month = parseInt(stripped_date[1]) - 1
             let day = parseInt(stripped_date[2])
-            console.log(year)
-            console.log(month)
-            console.log(day)
+            
             const startDate = new Date(year,month,day);
             
 
@@ -799,8 +797,7 @@
             
             const endDate = new Date(year,month,day);
 
-            console.log(startDate)
-            console.log(trendsStartDate)
+            
             
             if (endDate < startDate) {
                 showToast('End date must be after start date');
