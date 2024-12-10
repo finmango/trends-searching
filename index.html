@@ -383,8 +383,6 @@
                 <button class="preset-btn" data-days="180">6 Months</button>
                 <button class="preset-btn" data-days="365">1 Year</button>
                 <button class="preset-btn" data-days="1825">5 Years</button>
-                <button class="preset-btn" data-days="3650">10 Years</button>
-                <button class="preset-btn" data-days="max">All Time (Since 2004)</button>
             </div>
 
             <div class="date-range-container">
@@ -407,11 +405,9 @@
                 <div class="input-field">
                     <label class="input-label" for="geoType">Geographic Level</label>
                     <select id="geoType" class="input-control" onchange="updateGeoOptions()">
-                        <option value="GLOBAL">Global</option>
                         <option value="COUNTRY">Country</option>
-                        <option value="REGION">Region</option>
+                        <option value="REGION"> US State</option>
                         <option value="DMA">DMA (Metro Area)</option>
-                        <option value="CUSTOM">Custom Locations</option>
                     </select>
                 </div>
 
@@ -438,10 +434,12 @@
             
             <div id="searchTermsList" class="search-terms"></div>
             
-            <button onclick="addSearchTerm()" class="add-btn">
-                <span class="material-icons">add</span>
-                Add Search Term
-            </button>
+            <!--  
+                <button onclick="addSearchTerm()" class="add-btn">
+                    <span class="material-icons">add</span>
+                    Add Search Term
+                </button>
+            -->
 
             <div class="button-container">
                 <button onclick="updateTrends()" class="btn btn-primary">
@@ -472,7 +470,7 @@
 
     <script>
         // Backend URL
-        const BACKEND_URL = 'https://finmango-trends-backend.onrender.com';
+        const BACKEND_URL = 'https://trends-microservice.onrender.com';
         
         let trendsData = [];
         let searchTermCount = 0;
@@ -636,9 +634,11 @@
         };
 
 // Initialize date handling
-        const today = new Date();
-        const trendsStartDate = new Date('2004-01-01');
-
+        const today = new Date(); 
+        let date = new Date(new Date().setDate(new Date().getDate() - 1825))
+        const trendsStartDate = new Date(year=date.getUTCFullYear(), month=date.getMonth(), day=date.getDate())
+        
+        
         // Initialize date pickers
         flatpickr('.date-picker', {
             maxDate: 'today',
@@ -782,8 +782,22 @@
         }
 
         function validateDateRange() {
-            const startDate = new Date(document.getElementById('startDate').value);
-            const endDate = new Date(document.getElementById('endDate').value);
+            let stripped_date = document.getElementById('startDate').value.split("-")
+            let year = parseInt(stripped_date[0])
+            let month = parseInt(stripped_date[1]) - 1
+            let day = parseInt(stripped_date[2])
+            
+            const startDate = new Date(year,month,day);
+            
+
+            stripped_date = document.getElementById('endDate').value.split("-")
+            year = parseInt(stripped_date[0])
+            month = parseInt(month[1]) - 1
+            day = parseInt(stripped_date[2])
+            
+            const endDate = new Date(year,month,day);
+
+            
             
             if (endDate < startDate) {
                 showToast('End date must be after start date');
@@ -799,97 +813,104 @@
         }
 
 async function fetchTrendsData(terms) {
-            if (!validateDateRange()) return;
+    if (!validateDateRange()) return;
 
-            const validTerms = terms.filter(term => term.trim() !== '');
-            if (validTerms.length === 0) {
-                showToast('Please enter at least one search term');
-                return;
+    const validTerms = terms.filter(term => term.trim() !== '');
+    if (validTerms.length === 0) {
+        showToast('Please enter at least one search term');
+        return;
+    }
+
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const geoType = document.getElementById('geoType').value;
+    
+    let geoValues = [];
+    if (geoType === 'CUSTOM') {
+        const locationRows = document.querySelectorAll('.location-row');
+        locationRows.forEach(row => {
+            const value = row.querySelector('.location-value').value;
+            if (value) geoValues.push(value);
+        });
+    } else if (geoType !== 'GLOBAL') {
+        const geoValue = document.getElementById('geoValue').value;
+        if (geoValue) geoValues.push(geoValue);
+    }
+
+    document.getElementById('loadingOverlay').style.display = 'flex';
+
+    
+    let geoRestriction = ""
+
+            if (geoType == 'COUNTRY'){
+                geoRestriction = 'country'
+            } else if (geoType == 'DMA'){
+                geoRestriction == 'dma'
+            } else if (geoType == 'REGION') {
+                geoRestriction = 'region'
             }
 
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            const geoType = document.getElementById('geoType').value;
-            
-            let geoValues = [];
-            if (geoType === 'CUSTOM') {
-                const locationRows = document.querySelectorAll('.location-row');
-                locationRows.forEach(row => {
-                    const value = row.querySelector('.location-value').value;
-                    if (value) geoValues.push(value);
+    try {
+        const requests = geoValues.length > 0 ? 
+            geoValues.map(geo => {
+                const params = new URLSearchParams({
+                    terms: validTerms.join(','),
+                    startDate: startDate,
+                    endDate: endDate,
+                    geo: geo,
+                    geo_restriction: geoRestriction,
+                    freq: 'day'
                 });
-            } else if (geoType !== 'GLOBAL') {
-                const geoValue = document.getElementById('geoValue').value;
-                if (geoValue) geoValues.push(geoValue);
-            }
+                return fetch(`${BACKEND_URL}/search-terms?${params}`);
+            }) : 
+            [fetch(`${BACKEND_URL}/search-terms?${new URLSearchParams({
+                terms: validTerms.join(','),
+                startDate: startDate,
+                endDate: endDate,
+                geo: ''
+            })}`)];
 
-            document.getElementById('loadingOverlay').style.display = 'flex';
-
-            try {
-                const requests = geoValues.length > 0 ? 
-                    geoValues.map(geo => {
-                        const params = new URLSearchParams({
-                            terms: validTerms.join(','),
-                            startDate: startDate,
-                            endDate: endDate,
-                            geo: geo
-                        });
-                        return fetch(`${BACKEND_URL}/api/trends?${params}`);
-                    }) : 
-                    [fetch(`${BACKEND_URL}/api/trends?${new URLSearchParams({
-                        terms: validTerms.join(','),
-                        startDate: startDate,
-                        endDate: endDate,
-                        geo: ''
-                    })}`)];
-
-                const responses = await Promise.all(requests);
-                const jsonData = await Promise.all(responses.map(r => r.json()));
-                
-                trendsData = mergeLocationData(jsonData, geoValues);
-                
-                displayData(trendsData);
-                displayChart(trendsData);
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('Error fetching trends data. Please try again later.');
-            } finally {
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }
+        const responses = await Promise.all(requests);
+        const jsonData = await Promise.all(responses.map(r => r.json()));
+        
+        // Verify the data structure
+        if (!jsonData[0]?.default?.timelineData) {
+            throw new Error('Invalid data format received');
         }
+        
+        trendsData = mergeLocationData(jsonData, geoValues);
+        
+        displayData(trendsData);
+        displayChart(trendsData);
 
-        function mergeLocationData(jsonData, geoValues) {
-            const searchTerms = Array.from(document.querySelectorAll('.search-term'))
-                .map(input => input.value.trim())
-                .filter(term => term !== '');
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error fetching trends data. Please try again later.');
+    } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+}
 
-            if (geoValues.length <= 1) {
-                return jsonData[0].default.timelineData.map(point => ({
-                    date: new Date(point.time * 1000).toLocaleDateString(),
-                    ...point.value.reduce((acc, val, idx) => {
-                        acc[searchTerms[idx]] = val;
-                        return acc;
-                    }, {})
-                }));
+function mergeLocationData(jsonData, geoValues) {
+    // For single location or global search
+    if (geoValues.length <= 1) {
+        // Group by date and transform into the chart-friendly format
+        const dateMap = new Map();
+        
+        jsonData[0].default.timelineData.forEach(point => {
+            const date = point.date;
+            if (!dateMap.has(date)) {
+                dateMap.set(date, { date });
             }
+            dateMap.get(date)[point.term] = point.value;
+        });
+        
+        return Array.from(dateMap.values());
+    }
+}
 
-            const timeMap = new Map();
-            
-            jsonData.forEach((data, locationIndex) => {
-                data.default.timelineData.forEach(point => {
-                    const date = new Date(point.time * 1000).toLocaleDateString();
-                    if (!timeMap.has(date)) {
-                        timeMap.set(date, { date });
-                    }
-                    point.value.forEach((val, termIndex) => {
-                        const label = `${searchTerms[termIndex]} (${geoData[document.getElementById('geoType').value][geoValues[locationIndex]] || geoValues[locationIndex]})`;
-                        timeMap.get(date)[label] = val;
-                    });
-                });
-            });
 
-            return Array.from(timeMap.values());
-        }
+
 
         function displayData(data) {
             const table = document.createElement('table');
@@ -1006,14 +1027,17 @@ async function fetchTrendsData(terms) {
         document.getElementById('presetDates').addEventListener('click', (e) => {
             if (e.target.classList.contains('preset-btn')) {
                 const days = e.target.dataset.days;
-                const endDate = new Date();
+                let endDate = new Date();
+                
                 let startDate;
 
                 if (days === 'max') {
                     startDate = new Date('2004-01-01');
                 } else {
                     startDate = new Date();
+                    
                     startDate.setDate(endDate.getDate() - parseInt(days));
+                    startDate.setHours(0,0,0,0)
                     // Ensure we don't go before 2004
                     if (startDate < trendsStartDate) {
                         startDate = new Date(trendsStartDate);
@@ -1047,7 +1071,7 @@ async function fetchTrendsData(terms) {
             document.getElementById('endDate').value = today.toISOString().split('T')[0];
             
             // Set "All Time" as default active button
-            document.querySelector('[data-days="max"]').classList.add('active');
+            document.querySelector('[data-days="1825"]').classList.add('active');
             
             // Test backend connection
             fetch(`${BACKEND_URL}/health`)
